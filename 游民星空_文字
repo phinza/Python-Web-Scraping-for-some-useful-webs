@@ -1,0 +1,60 @@
+#Python 3
+#该代码适用于爬取游民星空大部分文字攻略
+
+import re
+import requests
+import os
+
+#Basic idea: 
+#1.获取攻略首页源代码
+#2.利用re提取出导航页的每页url
+#3.写个循环，进入每一个url并利用re提取出文本，写入文档
+
+def get_html(url): #actually...we are getting the source code of the target web
+    #simiulating the browser then send the http request to the servicer
+    #sending 'get' requests to the url
+    response = requests.get(url = url)
+    
+    #游民星空 is using 'utf-8' encoding, therefore...
+    response.encoding = 'utf-8'
+    
+    #then we can get the source code of the target web
+    html = response.text
+    return html
+    
+def get_title_and_create_document(title_range, html):
+    title = re.findall(title_range, html, re.S)[0]
+    fb = open('%s.txt' % title, 'w', encoding = 'utf-8')
+    return fb
+    
+def get_info_for_each_page(content_range, details, html, url):
+    div = str(re.findall(content_range, html, re.S))
+    info_list = [[url, 'temp']] + re.findall(details, div, re.S) 
+    return info_list
+
+def clean(info_content, info_url, info_title, fb):
+    #info_content = info_content.replace()
+    #and more clean
+    fb.write(info_content)
+    fb.write('\n\n')
+    print ('正在爬取...%s %s' % (info_url, info_title))
+
+def get_content(info_list, content, fb):
+    for info in info_list:
+        info_url, info_title = info
+        info_response = requests.get(url = info_url)
+        info_response.encoding = 'utf-8'
+        info_html = info_response.text
+        
+        info_content = str(re.findall(content, info_html, re.S))
+        clean(info_content, info_url, info_title, fb)
+   
+def main():
+    print ('请输入网站')
+    url = input()
+    html = get_html(url)
+    fb = get_title_and_create_document(r'<meta name="keywords" content="(.*?)">',html)
+    info_list = get_info_for_each_page(r'<div class="bd">.*?</div>',r'href=\\\'(.*?)\\\'>(.*?)</a>',html, url)
+    get_content(info_list, r'<p>(.*?)</p>',fb)
+
+main()
